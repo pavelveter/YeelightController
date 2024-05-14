@@ -32,12 +32,20 @@ color_to_int() {
     printf '%d' $color_hex
 }
 
+# If the command is a known color name, assume the 'color' command
+if grep -m1 -q -i "^# $command;" $0; then
+    color=$command
+    command="color"
+else
+    color=$3
+fi
+
 case $command in
 "on"|"off")
  send_command "{\"id\":1,\"method\":\"set_power\",\"params\":[\"$command\",\"smooth\",500]}"
  ;;
 "color")
- send_command "{\"id\":1,\"method\":\"set_rgb\",\"params\":[$(color_to_int $3),\"smooth\",500]}"
+ send_command "{\"id\":1,\"method\":\"set_rgb\",\"params\":[$(color_to_int "$color"),\"smooth\",500]}"
  ;;
 "disco")
  send_command "{\"id\":1,\"method\":\"start_cf\",\"params\":[ 50, 0, \"100, 1, 255, 100, 100, 1, 32768, 100, 100, 1, 16711680, 100\"]}"
