@@ -72,7 +72,7 @@ light.sh [ip] [command] <color> -- utility to control Yeelight smart bulb over w
 where command can have one of the following values:
     on - turn on the light
     off - turn off the light
-    color <color> - set the color to <color> where <color> is a color (red/blue/green/white and so on)
+    [color] <color> - set the color to $(awk '/^# Color values/ {flag=1; next} /^$/ {flag=0} flag' light.sh | cut -d ';' -f 1 | cut -d ' ' -f 2 | tr -s '\n' ',' | sed 's/,$//')
     disco - turns on disco mode
     sunrise - turns on sunrise mode
     notify-blue - notification in blue color
