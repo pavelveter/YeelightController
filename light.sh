@@ -1,52 +1,65 @@
 #!/bin/sh
 # Simple script to control Yeelight over wifi
 
-# The command is provided as input by the user to this script
-command=$1
+# Color values
+# black;0x000000
+# white;0xFFFFFF
+# red;0xFF0000
+# lime;0x00FF00
+# blue;0x0000FF
+# yellow;0xFFFF00
+# cyan;0x00FFFF
+# magenta;0xFF00FF
+# silver;0xC0C0C0
+# gray;0x808080
+# maroon;0x800000
+# olive;0x808000
+# green;0x008000
+# purple;0x800080
+# teal;0x008080
+# navy;0x000080
 
-# IP of the Yeelight is discovered by running the configure-light.sh script (works for a single bulb as of now)
-[ -f ip.list ] && ip=`cat ip.list` || echo "Please run configure-light.sh first if you haven't run it before in this network." 
+# The ip and command is provided as input by the user to this script
+ip=$1
+command=$2
+
+send_command() {
+    printf "$1\r\n" | nc -w1 $ip 55443
+}
+
+color_to_int() {
+    color_hex=$(grep -m1 -i "^# $1;" $0 | cut -d ';' -f 2)
+    printf '%d' $color_hex
+}
 
 case $command in
-"on")
- printf "{\"id\":1,\"method\":\"set_power\",\"params\":[\"on\",\"smooth\",500]}\r\n" | nc -w1 $ip 55443
- ;;
-"off")
- printf "{\"id\":1,\"method\":\"set_power\",\"params\":[\"off\",\"smooth\",500]}\r\n" | nc -w1 $ip 55443
+"on"|"off")
+ send_command "{\"id\":1,\"method\":\"set_power\",\"params\":[\"$command\",\"smooth\",500]}"
  ;;
 "color")
- color_hex=$(grep -i $2 colors | awk -F, '{print $2}') 
- color_int=$(printf '%d' $color_hex) 
- printf "{\"id\":1,\"method\":\"set_rgb\",\"params\":[$color_int,\"smooth\",500]}\r\n" | nc -w1 $ip 55443
+ send_command "{\"id\":1,\"method\":\"set_rgb\",\"params\":[$(color_to_int $3),\"smooth\",500]}"
  ;;
 "disco")
- printf "{\"id\":1,\"method\":\"start_cf\",\"params\":[ 50, 0, \"100, 1, 255, 100, 100, 1, 32768, 100, 100, 1, 16711680, 100\"]}\r\n" | nc -w1 $ip 55443
+ send_command "{\"id\":1,\"method\":\"start_cf\",\"params\":[ 50, 0, \"100, 1, 255, 100, 100, 1, 32768, 100, 100, 1, 16711680, 100\"]}"
  ;;
 "sunrise")
- printf "{\"id\":1,\"method\":\"start_cf\",\"params\":[ 3, 1, \"50, 1, 16731392, 1, 360000, 2, 1700, 10, 540000, 2, 2700, 100\"]}\r\n" | nc -w1 $ip 55443
+ send_command "{\"id\":1,\"method\":\"start_cf\",\"params\":[ 3, 1, \"50, 1, 16731392, 1, 360000, 2, 1700, 10, 540000, 2, 2700, 100\"]}"
  ;;
-"notify-blue")
- printf "{\"id\":1,\"method\":\"start_cf\",\"params\":[ 5, 0, \"100, 1, 255, 100, 100, 1, 255, 1\"]}\r\n" | nc -w1 $ip 55443
+"notify-"*)
+ color=$(color_to_int ${command#notify-})
+ send_command "{\"id\":1,\"method\":\"start_cf\",\"params\":[ 5, 0, \"100, 1, $color, 100, 100, 1, $color, 1\"]}"
  ;;
-"notify-green")
- printf "{\"id\":1,\"method\":\"start_cf\",\"params\":[ 5, 0, \"100, 1, 32768, 100, 100, 1, 32768, 1\"]}\r\n" | nc -w1 $ip 55443
- ;;
-"notify-red")
- printf "{\"id\":1,\"method\":\"start_cf\",\"params\":[ 5, 0, \"100, 1, 16711680, 100, 100, 1, 16711680, 1\"]}\r\n" | nc -w1 $ip 55443
- ;;
- "dim")
- printf "{\"id\":1,\"method\":\"set_bright\",\"params\":[5]}\r\n" | nc -w1 $ip 55443
- ;;
-"undim")
- printf "{\"id\":1,\"method\":\"set_bright\",\"params\":[100]}\r\n" | nc -w1 $ip 55443
+ "dim"|"undim")
+ level=$([[ $command == "dim" ]] && echo 5 || echo 100)
+ send_command "{\"id\":1,\"method\":\"set_bright\",\"params\":[$level]}"
  ;;
 "brightness")
- level=$2
- printf "{\"id\":1,\"method\":\"set_bright\",\"params\":[$level]}\r\n" | nc -w1 $ip 55443
+ level=$3
+ send_command "{\"id\":1,\"method\":\"set_bright\",\"params\":[$level]}"
  ;;
 *)
  printf "
-light.sh [command] <color> -- utility to control Yeelight smart bulb over wifi
+light.sh [ip] [command] <color> -- utility to control Yeelight smart bulb over wifi
 
 where command can have one of the following values:
     on - turn on the light
