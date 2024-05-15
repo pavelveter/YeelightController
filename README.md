@@ -16,18 +16,19 @@ are shell, awk, netcat, arp - all of which should be bundled with your OS.
 3.  Run ./light.sh -h for options on how to control the bulb
 
 ```
-light.sh [ip] [command] <color> -- utility to control Yeelight smart bulb over wifi
+light.sh <ip> [command] <color> -- utility to control Yeelight smart bulb over wifi
 
 where command can have one of the following values:
     on - turn on the light
     off - turn off the light
-    [color] <color> - set the color to <color>
+    [color] <color> - set the color to <color>, keyword is optional
+    [t] <number> - set the white light temperature to 1700..6500, keyword is optional
     disco - turns on disco mode
     sunrise - turns on sunrise mode
     notify-<color> - notification in <color>
     dim - dim light to brightness 5
     undim - reset light to brightness 100
-    brightness <level> - set the brightness to <level> where <level> is an integer from 1 (dimmest) to 100 (brightest)
+    [brightness] <level> - set the brightness to <level> from 1 (dimmest) to 100 (brightest), keyword is optional
     <colors>: black,white,red,lime,blue,yellow,cyan,magenta,silver,gray,maroon,olive,green,purple,teal,navy
 ```
 

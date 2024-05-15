@@ -2,7 +2,6 @@
 # Simple script to control Yeelight over wifi
 
 # Color values
-# black;0x000000
 # white;0xFFFFFF
 # red;0xFF0000
 # lime;0x00FF00
@@ -24,7 +23,7 @@ ip=$1
 command=$2
 
 send_command() {
-    printf '{"id": 1, "method":"%s", "params":[%s]}\r\n' "$1" "$2" | nc -w1 $ip 55443
+    printf '{"id": 1, "method":"%s", "params":[%s]}\r\n' "$1" "$2" | nc -w 1 $ip 55443
 }
 
 color_to_int() {
@@ -39,13 +38,24 @@ if grep -m1 -q -i "^# $command;" "$0"; then
 else
     color=$3
 fi
+# If the command is a number, assume the 't' or 'brightness' commands
+if grep -qE '^[0-9]+$' <<< "$command" 2>/dev/null; then
+  num=$command
+  # If 0 < command <= 100, assume the 'brightness' commands else assume the 't' command
+  [[ $command -ge 0 && $command -le 100 ]] && command="brightness" || command="t"
+else
+  num=$3
+fi
 
 case $command in
 "on"|"off")
  send_command set_power '"'$command'","smooth",500'
  ;;
 "color")
- send_command set_rgb ''$(color_to_int "$color")',"smooth",500'
+ send_command set_scene '"color", '$(color_to_int "$color")', 100'
+ ;;
+ 't')
+ send_command set_ct_abx ''$num', "smooth", 500'
  ;;
 "disco")
  send_command start_cf '50, 0, "100, 1, 255, 100, 100, 1, 32768, 100, 100, 1, 16711680, 100"'
@@ -58,27 +68,27 @@ case $command in
  send_command start_cf '5, 0, "100, 1, '$color', 100, 100, 1, '$color', 1"'
  ;;
  "dim"|"undim")
- level=$([[ $command == "dim" ]] && echo 5 || echo 100)
- send_command  set_bright $level
+ level=$([ $command = "dim" ] && echo 5 || echo 100)
+ send_command set_bright $level
  ;;
 "brightness")
- level=$3
- send_command  set_bright $level
+ send_command set_bright $num
  ;;
 *)
  printf "
-light.sh [ip] [command] <color> -- utility to control Yeelight smart bulb over wifi
+light.sh <ip> [command] <color> -- utility to control Yeelight smart bulb over wifi
 
 where command can have one of the following values:
     on - turn on the light
     off - turn off the light
-    [color] <color> - set the color to <color>
+    [color] <color> - set the color to <color>, keyword is optional
+    [t] <number> - set the white light temperature to 1700..6500, keyword is optional
     disco - turns on disco mode
     sunrise - turns on sunrise mode
     notify-<color> - notification in <color>
     dim - dim light to brightness 5
     undim - reset light to brightness 100
-    brightness <level> - set the brightness to <level> where <level> is an integer from 1 (dimmest) to 100 (brightest)
+    [brightness] <level> - set the brightness to <level> from 1 (dimmest) to 100 (brightest), keyword is optional
     <colors>: %s
 " "$(awk '/^# Color values/ {flag=1; next} /^$/ {flag=0} flag' light.sh | cut -d ';' -f 1 | cut -d ' ' -f 2 | tr -s '\n' ',' | sed 's/,$//')"
 ;;
