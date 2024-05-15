@@ -23,7 +23,7 @@ ip=$1
 command=$2
 
 send_command() {
-    printf '{"id": 1, "method":"%s", "params":[%s]}\r\n' "$1" "$2" | nc -w 1 $ip 55443
+    printf '{"id": 1, "method":"%s", "params":[%s]}\r\n' "$1" "$2" | nc -w 1 "$ip" 55443
 }
 
 color_to_int() {
@@ -42,20 +42,20 @@ fi
 if grep -qE '^[0-9]+$' <<< "$command" 2>/dev/null; then
   num=$command
   # If 0 < command <= 100, assume the 'brightness' commands else assume the 't' command
-  [[ $command -ge 0 && $command -le 100 ]] && command="brightness" || command="t"
+  [ "$command" -ge 1 ] && [ "$command" -le 100 ] && command="brightness" || command="t"
 else
   num=$3
 fi
 
 case $command in
 "on"|"off")
- send_command set_power '"'$command'","smooth",500'
+ send_command set_power '"'"$command"'","smooth",500'
  ;;
 "color")
- send_command set_scene '"color", '$(color_to_int "$color")', 100'
+ send_command set_scene '"color", '"$(color_to_int "$color")"', 100'
  ;;
  't')
- send_command set_ct_abx ''$num', "smooth", 500'
+ send_command set_ct_abx ''"$num"', "smooth", 500'
  ;;
 "disco")
  send_command start_cf '50, 0, "100, 1, 255, 100, 100, 1, 32768, 100, 100, 1, 16711680, 100"'
@@ -64,15 +64,17 @@ case $command in
  send_command start_cf '3, 1, "50, 1, 16731392, 1, 360000, 2, 1700, 10, 540000, 2, 2700, 100"'
  ;;
 "notify-"*)
- color=$(color_to_int ${command#notify-})
- send_command start_cf '5, 0, "100, 1, '$color', 100, 100, 1, '$color', 1"'
+ color=$(color_to_int "${command#notify-}")
+ send_command start_cf '5, 0, "100, 1, '"$color"', 100, 100, 1, '"$color"', 1"'
  ;;
- "dim"|"undim")
- level=$([ $command = "dim" ] && echo 5 || echo 100)
- send_command set_bright $level
+ "dim")
+ send_command set_bright 5
+ ;;
+ "undim")
+ send_command set_bright 100
  ;;
 "brightness")
- send_command set_bright $num
+ send_command set_bright "$num"
  ;;
 *)
  printf "
@@ -88,7 +90,7 @@ where command can have one of the following values:
     notify-<color> - notification in <color>
     dim - dim light to brightness 5
     undim - reset light to brightness 100
-    [brightness] <level> - set the brightness to <level> from 1 (dimmest) to 100 (brightest), keyword is optional
+    [brightness] <level> - set the bgit purightness to <level> from 1 (dimmest) to 100 (brightest), keyword is optional
     <colors>: %s
 " "$(awk '/^# Color values/ {flag=1; next} /^$/ {flag=0} flag' light.sh | cut -d ';' -f 1 | cut -d ' ' -f 2 | tr -s '\n' ',' | sed 's/,$//')"
 ;;
