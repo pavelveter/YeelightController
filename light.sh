@@ -1,38 +1,52 @@
 #!/bin/sh
-# Simple script to control Yeelight over wifi
+# Simple script to control Yeelight over wi-fi
 
 # Color values
-# white;0xFFFFFF
-# red;0xFF0000
-# lime;0x00FF00
-# blue;0x0000FF
-# yellow;0xFFFF00
-# cyan;0x00FFFF
-# magenta;0xFF00FF
-# silver;0xC0C0C0
-# gray;0x808080
-# maroon;0x800000
-# olive;0x808000
-# green;0x008000
-# purple;0x800080
-# teal;0x008080
-# navy;0x000080
+read -r -d '' colors << EOF
+amber;0xFFBF00
+blue;0x0000FF
+cyan;0x00FFFF
+dandelion;0xF0E130
+emerald;0x50C878
+flamingo;0xFC8EAC
+green;0x00FF00
+honeydew;0xF0FFF0
+indigo;0x4B0082
+jade;0x00A86B
+khaki;0xC3B091
+lavender;0xE6E6FA
+magenta;0xFF00FF
+navy;0x000080
+olive;0x808000
+purple;0x800080
+quartz;0x51484F
+red;0xFF0000
+silver;0xC0C0C0
+teal;0x008080
+ultramarine;0x3F00FF
+violet;0xEE82EE
+white;0xFFFFFF
+xanadu;0x738678
+yellow;0xFFFF00
+zinnwaldite;0x2C1608
+EOF
 
 # The ip and command is provided as input by the user to this script
 ip=$1
-command=$2
+# If no command is provided, assume the 'help' command
+[ -z "$2" ] && command="help" || command=$2
 
 send_command() {
     printf '{"id": 1, "method":"%s", "params":[%s]}\r\n' "$1" "$2" | nc -w 1 "$ip" 55443
 }
 
 color_to_int() {
-    color_hex=$(grep -m1 -i "^# $1;" "$0" | cut -d ';' -f 2)
+    color_hex=$(grep "$1" <<< "$colors" | cut -d';' -f2)
     printf '%d' "$color_hex"
 }
 
 # If the command is a known color name, assume the 'color' command
-if grep -m1 -q -i "^# $command;" "$0"; then
+if grep -qi "^$command" <<< "$colors" ; then
     color=$command
     command="color"
 else
@@ -41,7 +55,7 @@ fi
 # If the command is a number, assume the 't' or 'brightness' commands
 if grep -qE '^[0-9]+$' <<< "$command" 2>/dev/null; then
   num=$command
-  # If 0 < command <= 100, assume the 'brightness' commands else assume the 't' command
+  # If 1 <= command <= 100, assume the 'brightness' command else assume the 't' command
   [ "$command" -ge 1 ] && [ "$command" -le 100 ] && command="brightness" || command="t"
 else
   num=$3
@@ -78,7 +92,7 @@ case $command in
  ;;
 *)
  printf "
-light.sh <ip> [command] <color> -- utility to control Yeelight smart bulb over wifi
+light.sh <ip> [command|<color>|<t>|<brightness>] -- utility to control Yeelight smart bulb over wi-fi
 
 where command can have one of the following values:
     on - turn on the light
@@ -90,8 +104,9 @@ where command can have one of the following values:
     notify-<color> - notification in <color>
     dim - dim light to brightness 5
     undim - reset light to brightness 100
-    [brightness] <level> - set the bgit purightness to <level> from 1 (dimmest) to 100 (brightest), keyword is optional
-    <colors>: %s
-" "$(awk '/^# Color values/ {flag=1; next} /^$/ {flag=0} flag' light.sh | cut -d ';' -f 1 | cut -d ' ' -f 2 | tr -s '\n' ',' | sed 's/,$//')"
+    [brightness] <level> - set the britness to <level> from 1 (dimmest) to 100 (brightest), keyword is optional
+    <color>: %s
+" "$(tr '\n' ',' <<< "$colors" | sed 's/;0x[0-9A-Fa-f]*//g' | sed 's/,$//'
+)"
 ;;
 esac
