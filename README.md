@@ -14,9 +14,10 @@ are shell, awk, netcat, arp - all of which should be bundled with your OS.
 3.  Run ./light.sh -h for options on how to control the bulb(s)
 
 ```
-Usage: ./light.sh <ip> [command|<color>|<t>|<brightness>] -- utility to control Yeelight smart bulb(s) over wi-fi
+Usage: ./light.sh <ip|@alias> <command> -- utility to control Yeelight smart bulb(s) over wi-fi
 
 the 'ip' can be a single value, several values, or ranges of IP addresses,
+the '@alias' can be an alias of a bulb or a group of the bulbs,
 the 'command' can have one of the following values:
 
 on - turn on the light
@@ -33,11 +34,13 @@ undim - reset light to brightness 100
 <color>: amber, blue, cyan, dandelion, emerald, flamingo, green, honeydew, indigo, jade, khaki, lavender,
 magenta, navy, olive, purple, quartz, red, silver, teal, ultramarine, violet, white, xanadu,
 yellow, zinnwaldite
+<alias>: available aliases
 
 Examples: ./light.sh 192.168.1.1 on -- turn on the single bulb
           ./light.sh 192.168.1.1-2 192.168.1.4 color red -- give three bulbs the color red
           ./light.sh 192.168.1.1 192.168.1.3 50 -- set the brightness of two bulbs to 50%
           ./light.sh 192.168.1.2 4100 -- set the bulb's white temperature to 4100
+          ./light.sh @alias notify-blue -- notify the alias bulbs with blue color
 ```
 
 ## Demo

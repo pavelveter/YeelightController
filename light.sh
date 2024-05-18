@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Simple script to control Yeelight over wi-fi
 
 # Color values
@@ -31,12 +31,24 @@ yellow;0xFFFF00
 zinnwaldite;0x2C1608
 EOF
 
+# Bulb groups, each can be one or a range of IP addresses, or a lot of groups
+read -r -d '' bulbs << EOF
+@room;192.168.88.51-54
+@kitchen;192.168.88.57-59
+@bathroom;192.168.88.55
+@monitor;192.168.88.51
+@stand;192.168.88.52
+@tv;192.168.88.53 192.168.88.54
+@all;192.168.88.51-54 192.168.88.55 192.168.88.57-59
+EOF
+
 print_help() {
   cat << EOF
 
-Usage: $0 <ip> [command|<color>|<t>|<brightness>] -- utility to control Yeelight smart bulb(s) over wi-fi
+Usage: $0 <ip|@alias> <command> -- utility to control Yeelight smart bulb(s) over wi-fi
 
 the 'ip' can be a single value, several values, or ranges of IP addresses,
+the '@alias' can be an alias of a bulb or a group of the bulbs,
 the 'command' can have one of the following values:
 
 on - turn on the light
@@ -48,32 +60,41 @@ sunrise - turns on sunrise mode
 notify-<color> - notification in <color>
 dim - dim light to brightness 5
 undim - reset light to brightness 100
-[brightness] <level> - set the brightness to <level> from 1 (dimmest) to 100 (brightest), key is optional
+[brightness] <level> - from 1 (dimmest) to 100 (brightest), key is optional
 
-<color>: $(tr '\n' ' ' <<< "$colors" | sed 's/;0x[0-9A-Fa-f]*//g' | sed 's/ $//' | sed 's/ /, /g' | fold -w 100 -s)
+<color>: $(tr '\n' ' ' <<< "$colors" | sed 's/;0x[0-9A-Fa-f]*//g' | sed 's/ $//' | sed 's/ /, /g' | fold -w 75 -s)
+<alias>: $(cut -d ';' -f1 <<< "$bulbs" | tr '\n' ' ' | sed 's/ $//' | sed 's/ /, /g' | fold -w 75 -s)
 
 Examples: $0 192.168.1.1 on -- turn on the single bulb
           $0 192.168.1.1-2 192.168.1.4 color red -- give three bulbs the color red
           $0 192.168.1.1 192.168.1.3 50 -- set the brightness of two bulbs to 50%
           $0 192.168.1.2 4100 -- set the bulb's white temperature to 4100
+          $0 @room notify-blue -- notify via the room bulbs with blue color
 
 EOF
   exit 0
 }
 
+# Convert the bulbs string to an associative array
+declare -A bulb_groups
+while IFS=';' read -r key value; do
+  bulb_groups[$key]=$value
+done <<< "$bulbs"
+
 # The array of IP addresses
 ips=()
 
-# Iterate over all arguments
-for arg in "$@"; do
-  # If the argument is an IP address range, add all IPs in the range to the array
+# Add the argument to the array of IP addresses
+add_arg_to_ips() {
+  local arg=$1
+  # If the argument is a IP range, replace it with the corresponding IPs
   if [[ "$arg" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
     IFS='-' read -r ip range <<< "$arg"
     IFS='.' read -r i1 i2 i3 i4 <<< "$ip"
     for i in $(seq "$i4" 1 "$range"); do
       ips+=("$i1.$i2.$i3.$i")
     done
-  # If the argument is a single IP address, add it to the array
+  # If the group IP is a single IP address, add it to the array
   elif [[ "$arg" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     ips+=("$arg")
   else
@@ -84,6 +105,19 @@ for arg in "$@"; do
       param="$arg"
     fi
   fi
+}
+
+# Iterate over all arguments
+for arg in "$@"; do
+ # If the argument is an alias or a group name, replace it with the corresponding IPs
+  if [[ ${bulb_groups[$arg]} ]]; then
+    IFS=' ' read -r -a group_ips <<< "${bulb_groups[$arg]}"
+    for group_ip in "${group_ips[@]}"; do
+      add_arg_to_ips "$group_ip"
+    done
+  # If the argument is IP or the address range, add all IPs in the range to the array  
+    else add_arg_to_ips "$arg"
+  fi
 done
 
 case "$command" in
@@ -93,7 +127,7 @@ case "$command" in
 esac
 
 send_command() {
-  printf '{"id": 1, "method":"%s", "params":[%s]}\r\n' "$2" "$3" | nc -w 1 "$1" 55443 2>/dev/null &
+  printf '{"id": 1, "method":"%s", "params":[%s]}\r\n' "$2" "$3" | nc -w 1 "$1" 55443 &
 }
 
 color_to_int() {
