@@ -3,32 +3,32 @@
 
 # Color values
 read -r -d '' colors << EOF
-amber;0xFFBF00
-blue;0x0000FF
-cyan;0x00FFFF
-dandelion;0xF0E130
-emerald;0x50C878
-flamingo;0xFC8EAC
-green;0x00FF00
-honeydew;0xF0FFF0
-indigo;0x4B0082
-jade;0x00A86B
-khaki;0xC3B091
-lavender;0xE6E6FA
-magenta;0xFF00FF
-navy;0x000080
-olive;0x808000
-purple;0x800080
-quartz;0x51484F
-red;0xFF0000
-silver;0xC0C0C0
-teal;0x008080
-ultramarine;0x3F00FF
-violet;0xEE82EE
-white;0xFFFFFF
-xanadu;0x738678
-yellow;0xFFFF00
-zinnwaldite;0x2C1608
+amber;#FFBF00
+blue;#0000FF
+cyan;#00FFFF
+dandelion;#F0E130
+emerald;#50C878
+flamingo;#FC8EAC
+green;#00FF00
+honeydew;#F0FFF0
+indigo;#4B0082
+jade;#00A86B
+khaki;#C3B091
+lavender;#E6E6FA
+magenta;#FF00FF
+navy;#000080
+olive;#808000
+purple;#800080
+quartz;#51484F
+red;#FF0000
+silver;#C0C0C0
+teal;#008080
+ultramarine;#3F00FF
+violet;#EE82EE
+white;#FFFFFF
+xanadu;#738678
+yellow;#FFFF00
+zinnwaldite;#2C1608
 EOF
 
 # Bulb groups, each can be one or a range of IP addresses, or a lot of groups
@@ -45,7 +45,7 @@ EOF
 print_help() {
   cat << EOF
 
-Usage: $0 <ip|@alias> <command> -- utility to control Yeelight smart bulb(s) over wi-fi
+Usage: $(basename "$0") <ip|@alias> <command> -- utility to control Yeelight smart bulb(s) over wi-fi
 
 the 'ip' can be a single value, several values, or ranges of IP addresses,
 the '@alias' can be an alias of a bulb or a group of the bulbs,
@@ -62,14 +62,14 @@ dim - dim light to brightness 5
 undim - reset light to brightness 100
 [brightness] <level> - from 1 (dimmest) to 100 (brightest), key is optional
 
-<color>: $(tr '\n' ' ' <<< "$colors" | sed 's/;0x[0-9A-Fa-f]*//g' | sed 's/ $//' | sed 's/ /, /g' | fold -w 75 -s)
+<color>: $(tr '\n' ' ' <<< "$colors" | sed 's/;#[0-9A-Fa-f]*//g' | sed 's/ $//' | sed 's/ /, /g' | fold -w 75 -s)
 <alias>: $(cut -d ';' -f1 <<< "$bulbs" | tr '\n' ' ' | sed 's/ $//' | sed 's/ /, /g' | fold -w 75 -s)
 
-Examples: $0 192.168.1.1 on -- turn on the single bulb
-          $0 192.168.1.1-2 192.168.1.4 color red -- give three bulbs the color red
-          $0 192.168.1.1 192.168.1.3 50 -- set the brightness of two bulbs to 50%
-          $0 192.168.1.2 4100 -- set the bulb's white temperature to 4100
-          $0 @room notify-blue -- notify via the room bulbs with blue color
+Examples: $(basename "$0") 192.168.1.1 on -- turn on the single bulb
+          $(basename "$0") 192.168.1.1-2 192.168.1.4 color red -- give three bulbs the color red
+          $(basename "$0") 192.168.1.1 192.168.1.3 50 -- set the brightness of two bulbs to 50%
+          $(basename "$0") 192.168.1.2 4100 -- set the bulb's white temperature to 4100
+          $(basename "$0") @room notify-blue -- notify via the room bulbs with blue color
 
 EOF
   exit 0
@@ -131,7 +131,7 @@ send_command() {
 }
 
 color_to_int() {
-  color_hex=$(grep "$1" <<< "$colors" | cut -d';' -f2)
+  color_hex=$(grep "$1" <<< "$colors" | cut -d';' -f2 | sed 's/#/0x/')
   printf '%d' "$color_hex"
 }
 
